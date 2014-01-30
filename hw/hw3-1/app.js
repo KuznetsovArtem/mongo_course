@@ -15,7 +15,7 @@ MongoClient.connect('mongodb://localhost:27017/school', function(err, db) {
 //        "scores.type" : 0
     };
     var options = {
-        limit: 5
+        limit: 0
     };
 
     students.find(query, projection, options).each(function(err, doc) {
@@ -24,17 +24,28 @@ MongoClient.connect('mongodb://localhost:27017/school', function(err, db) {
             return db.close();
         }
 
-        var sc = 0;
-        doc.scores = doc.scores.filter(function(e, n) {
-//            console.log(e, n);
-            if(e.type == "homework") {
-                sc = e.score
-                return e
+        var removed = ''
+        for(var i = 0; i < doc.scores.length; i++) {
+            if(doc.scores[i].type == "homework") {
+                if(removed && removed.score < doc.scores[i].score) {
+                    break;
+                }
+                removed = doc.scores[i];
             }
-            return e;
+        }
+
+        doc.scores = doc.scores.filter(function(e, n) {
+            var cond = e.type == "homework" && e.score == removed.score
+            if(!cond) {
+                return e;
+            }
         });
 
-        console.log(doc.scores)
+        query['_id'] = doc['_id'];
+        students.update(query, doc, function(err, updated) {
+            if(err) throw err
+            console.log(updated)
+        });
 
     });
 
